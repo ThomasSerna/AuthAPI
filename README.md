@@ -1,6 +1,6 @@
 # AuthAPI
 
-A standalone Authentication service built with Spring Boot. Extracted from the Prepetud authentication system and simplified to function as a sole public API for managing user identities.
+A standalone Authentication service built with Spring Boot.
 
 ## 🚀 Key Features
 
