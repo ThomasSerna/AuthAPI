@@ -1,0 +1,93 @@
+spring:
+  application:
+    name: authapi
+  profiles:
+    default: local
+  datasource:
+    url: ${AUTH_API_DB_URL:jdbc:mysql://localhost:3306/authapi}
+    username: ${AUTH_API_DB_USERNAME:authapi}
+    password: ${AUTH_API_DB_PASSWORD:authapi}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  mail:
+    host: ${SPRING_MAIL_HOST:}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+          connectiontimeout: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT:5000}
+          timeout: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT:5000}
+          writetimeout: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT:5000}
+
+server:
+  port: ${AUTH_API_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+authapi:
+  security:
+    jwt:
+      issuer: ${AUTH_API_JWT_ISSUER:authapi}
+      secret: ${AUTH_API_JWT_SECRET:dev-only-authapi-secret-change-me-please-123456789}
+      access-token-ttl: ${AUTH_API_JWT_ACCESS_TOKEN_TTL:15m}
+      refresh-token-ttl: ${AUTH_API_JWT_REFRESH_TOKEN_TTL:30d}
+    email-verification:
+      token-ttl: ${AUTH_API_EMAIL_VERIFICATION_TOKEN_TTL:24h}
+      verification-url-template: ${AUTH_API_EMAIL_VERIFICATION_URL_TEMPLATE:http://localhost:8080/verify-email?token={token}}
+    password-reset:
+      token-ttl: ${AUTH_API_PASSWORD_RESET_TOKEN_TTL:1h}
+      reset-url-template: ${AUTH_API_PASSWORD_RESET_URL_TEMPLATE:http://localhost:8080/reset-password?token={token}}
+      request-min-response-time: ${AUTH_API_PASSWORD_RESET_REQUEST_MIN_RESPONSE_TIME:400ms}
+      reset-min-response-time: ${AUTH_API_PASSWORD_RESET_MIN_RESPONSE_TIME:400ms}
+    mfa-totp:
+      issuer: ${AUTH_API_MFA_TOTP_ISSUER:AuthApi}
+      encryption-secret: ${AUTH_API_MFA_TOTP_ENCRYPTION_SECRET:dev-only-authapi-totp-secret-change-me-123456789}
+      digits: ${AUTH_API_MFA_TOTP_DIGITS:6}
+      period: ${AUTH_API_MFA_TOTP_PERIOD:30s}
+      allowed-drift-windows: ${AUTH_API_MFA_TOTP_ALLOWED_DRIFT_WINDOWS:1}
+    step-up:
+      max-age: ${AUTH_API_STEP_UP_MAX_AGE:10m}
+    federation:
+      google:
+        client-id: ${AUTH_API_GOOGLE_CLIENT_ID:}
+        issuer: ${AUTH_API_GOOGLE_ISSUER:https://accounts.google.com}
+        jwk-set-uri: ${AUTH_API_GOOGLE_JWK_SET_URI:https://www.googleapis.com/oauth2/v3/certs}
+      microsoft:
+        client-id: ${AUTH_API_MICROSOFT_CLIENT_ID:}
+        jwk-set-uri: ${AUTH_API_MICROSOFT_JWK_SET_URI:https://login.microsoftonline.com/common/discovery/v2.0/keys}
+        accepted-issuer-prefixes:
+          - ${AUTH_API_MICROSOFT_ISSUER_PREFIX_PRIMARY:https://login.microsoftonline.com/}
+          - ${AUTH_API_MICROSOFT_ISSUER_PREFIX_SECONDARY:https://sts.windows.net/}
+    cors:
+      allowed-origins:
+        - ${AUTH_API_WEB_ORIGIN:http://localhost:3000}
+        - ${AUTH_API_WEB_ALT_ORIGIN:http://localhost:5173}
+    refresh-cookie:
+      name: ${AUTH_API_REFRESH_COOKIE_NAME:authapi_refresh_token}
+      secure: ${AUTH_API_REFRESH_COOKIE_SECURE:false}
+      same-site: ${AUTH_API_REFRESH_COOKIE_SAME_SITE:Lax}
+      path: ${AUTH_API_REFRESH_COOKIE_PATH:/api/v1/auth}
+  mail:
+    enabled: ${AUTH_API_MAIL_ENABLED:false}
+    from-email: ${AUTH_API_MAIL_FROM_EMAIL:noreply@authapi.com}
+    from-name: ${AUTH_API_MAIL_FROM_NAME:AuthApi}
+    reply-to: ${AUTH_API_MAIL_REPLY_TO:}

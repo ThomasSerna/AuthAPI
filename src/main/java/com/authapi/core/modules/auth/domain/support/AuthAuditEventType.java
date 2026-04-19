@@ -1,0 +1,19 @@
+package com.authapi.core.modules.auth.domain.support;
+
+public enum AuthAuditEventType {
+    LOGIN_SUCCESS,
+    LOGIN_FAILURE,
+    LOGOUT,
+    LOGOUT_ALL_SESSIONS,
+    MFA_FAILURE,
+    MFA_TOTP_SETUP_INITIATED,
+    MFA_TOTP_ENABLED,
+    MFA_TOTP_DISABLED,
+    PASSWORD_CHANGE,
+    PASSWORD_RESET,
+    REFRESH_REUSE,
+    STEP_UP_SUCCESS,
+    STEP_UP_FAILURE,
+    EMAIL_CHANGE,
+    ACCOUNT_DELETED
+}

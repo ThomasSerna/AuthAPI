@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: authapi-test
+  datasource:
+    url: jdbc:h2:mem:authapi;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+authapi:
+  security:
+    jwt:
+      issuer: authapi-test
+      secret: authapi-test-secret-at-least-thirty-two-characters
+      access-token-ttl: 15m
+      refresh-token-ttl: 30d
+    cors:
+      allowed-origins:
+        - http://localhost:3000
+    refresh-cookie:
+      name: authapi_refresh_token
+      secure: false
+      same-site: Lax
+      path: /api/v1/auth
