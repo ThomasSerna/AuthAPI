@@ -23,8 +23,6 @@ import com.authapi.core.modules.auth.domain.support.AuthRequestMetadata;
 import com.authapi.core.modules.user.domain.model.User;
 import com.authapi.core.modules.user.domain.service.UserService;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class SessionApplicationService {
 
     private static final String TOKEN_TYPE = "Bearer";
-    private static final Logger log = LoggerFactory.getLogger(SessionApplicationService.class);
     private static final Base64.Encoder PLACEHOLDER_PASSWORD_ENCODER = Base64.getUrlEncoder().withoutPadding();
 
     private final UserService userService;
@@ -66,19 +63,18 @@ public class SessionApplicationService {
     private final SecureRandom secureRandom = new SecureRandom();
 
     public SessionApplicationService(
-        UserService userService,
-        PasswordEncoder passwordEncoder,
-        TokenService tokenService,
-        RefreshTokenService refreshTokenService,
-        CurrentUserService currentUserService,
-        PasswordPolicyService passwordPolicyService,
-        EmailVerificationService emailVerificationService,
-        MfaTotpService mfaTotpService,
-        AuthAbuseProtectionService authAbuseProtectionService,
-        AuthAuditService authAuditService,
-        FederatedIdentityVerifier federatedIdentityVerifier,
-        ExternalIdentityService externalIdentityService
-    ) {
+            UserService userService,
+            PasswordEncoder passwordEncoder,
+            TokenService tokenService,
+            RefreshTokenService refreshTokenService,
+            CurrentUserService currentUserService,
+            PasswordPolicyService passwordPolicyService,
+            EmailVerificationService emailVerificationService,
+            MfaTotpService mfaTotpService,
+            AuthAbuseProtectionService authAbuseProtectionService,
+            AuthAuditService authAuditService,
+            FederatedIdentityVerifier federatedIdentityVerifier,
+            ExternalIdentityService externalIdentityService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
@@ -103,47 +99,43 @@ public class SessionApplicationService {
 
     @Transactional
     public AuthenticatedSession login(
-        String email,
-        String password,
-        String mfaCode,
-        AuthRequestMetadata requestMetadata
-    ) {
+            String email,
+            String password,
+            String mfaCode,
+            AuthRequestMetadata requestMetadata) {
         String normalizedEmail = userService.normalizeEmail(email);
         authAbuseProtectionService.assertLoginAllowed(requestMetadata.clientIp(), normalizedEmail);
 
         User user = userService.findByEmail(email).orElse(null);
         if (user == null
-            || !user.isActive()
-            || !passwordEncoder.matches(password, user.getPasswordHash())
-            || !user.isEmailVerified()) {
+                || !user.isActive()
+                || !passwordEncoder.matches(password, user.getPasswordHash())
+                || !user.isEmailVerified()) {
             authAbuseProtectionService.recordLoginFailure(requestMetadata.clientIp(), normalizedEmail);
             authAuditService.record(
-                AuthAuditEventType.LOGIN_FAILURE,
-                user,
-                normalizedEmail,
-                requestMetadata,
-                user != null && !user.isEmailVerified() ? "email not verified" : "invalid credentials"
-            );
+                    AuthAuditEventType.LOGIN_FAILURE,
+                    user,
+                    normalizedEmail,
+                    requestMetadata,
+                    user != null && !user.isEmailVerified() ? "email not verified" : "invalid credentials");
             throw invalidLoginException();
         }
 
         if (user.isTotpMfaEnabled()) {
             if (!hasText(mfaCode)) {
                 throw new ApiException(
-                    HttpStatus.UNAUTHORIZED,
-                    "MFA_REQUIRED",
-                    "Multi-factor authentication code is required."
-                );
+                        HttpStatus.UNAUTHORIZED,
+                        "MFA_REQUIRED",
+                        "Multi-factor authentication code is required.");
             }
             if (!mfaTotpService.isCodeValidForUser(user, mfaCode)) {
                 authAbuseProtectionService.recordLoginFailure(requestMetadata.clientIp(), normalizedEmail);
                 authAuditService.record(
-                    AuthAuditEventType.MFA_FAILURE,
-                    user,
-                    user.getEmail(),
-                    requestMetadata,
-                    "invalid totp code during login"
-                );
+                        AuthAuditEventType.MFA_FAILURE,
+                        user,
+                        user.getEmail(),
+                        requestMetadata,
+                        "invalid totp code during login");
                 throw invalidMfaCodeException();
             }
         }
@@ -151,30 +143,27 @@ public class SessionApplicationService {
         maybeUpgradePasswordHash(user, password);
         authAbuseProtectionService.clearLoginFailures(requestMetadata.clientIp(), normalizedEmail);
         authAuditService.record(
-            AuthAuditEventType.LOGIN_SUCCESS,
-            user,
-            user.getEmail(),
-            requestMetadata,
-            "login successful"
-        );
+                AuthAuditEventType.LOGIN_SUCCESS,
+                user,
+                user.getEmail(),
+                requestMetadata,
+                "login successful");
         return authenticate(user);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public AuthenticatedSession loginWithGoogle(
-        String idToken,
-        String mfaCode,
-        AuthRequestMetadata requestMetadata
-    ) {
+            String idToken,
+            String mfaCode,
+            AuthRequestMetadata requestMetadata) {
         return loginWithFederatedProvider(FederatedAuthProvider.GOOGLE, idToken, mfaCode, requestMetadata);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public AuthenticatedSession loginWithMicrosoft(
-        String idToken,
-        String mfaCode,
-        AuthRequestMetadata requestMetadata
-    ) {
+            String idToken,
+            String mfaCode,
+            AuthRequestMetadata requestMetadata) {
         return loginWithFederatedProvider(FederatedAuthProvider.MICROSOFT, idToken, mfaCode, requestMetadata);
     }
 
@@ -184,71 +173,63 @@ public class SessionApplicationService {
         RefreshTokenService.RefreshSession refreshSession = refreshTokenService.rotate(refreshToken, requestMetadata);
         TokenService.AccessToken accessToken = tokenService.issueAccessToken(refreshSession.user());
         return new AuthenticatedSession(
-            TOKEN_TYPE,
-            accessToken.token(),
-            accessToken.expiresAt(),
-            refreshSession.token(),
-            refreshSession.expiresAt(),
-            refreshSession.user()
-        );
+                TOKEN_TYPE,
+                accessToken.token(),
+                accessToken.expiresAt(),
+                refreshSession.token(),
+                refreshSession.expiresAt(),
+                refreshSession.user());
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void logout(String refreshToken, AuthRequestMetadata requestMetadata) {
         refreshTokenService.findUser(refreshToken).ifPresent(user -> authAuditService.record(
-            AuthAuditEventType.LOGOUT,
-            user,
-            user.getEmail(),
-            requestMetadata,
-            "logout successful"
-        ));
+                AuthAuditEventType.LOGOUT,
+                user,
+                user.getEmail(),
+                requestMetadata,
+                "logout successful"));
         refreshTokenService.revoke(refreshToken);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public AuthenticatedSession reauthenticate(
-        String password,
-        String mfaCode,
-        AuthRequestMetadata requestMetadata
-    ) {
+            String password,
+            String mfaCode,
+            AuthRequestMetadata requestMetadata) {
         User currentUser = currentUserService.getCurrentUser();
         if (!passwordEncoder.matches(password, currentUser.getPasswordHash())) {
             authAuditService.record(
-                AuthAuditEventType.STEP_UP_FAILURE,
-                currentUser,
-                currentUser.getEmail(),
-                requestMetadata,
-                "invalid password during reauthentication"
-            );
+                    AuthAuditEventType.STEP_UP_FAILURE,
+                    currentUser,
+                    currentUser.getEmail(),
+                    requestMetadata,
+                    "invalid password during reauthentication");
             throw new ApiException(
-                HttpStatus.UNAUTHORIZED,
-                "INVALID_REAUTHENTICATION",
-                "Password is incorrect."
-            );
+                    HttpStatus.UNAUTHORIZED,
+                    "INVALID_REAUTHENTICATION",
+                    "Password is incorrect.");
         }
         if (currentUser.isTotpMfaEnabled()) {
             if (!hasText(mfaCode)) {
                 authAuditService.record(
-                    AuthAuditEventType.STEP_UP_FAILURE,
-                    currentUser,
-                    currentUser.getEmail(),
-                    requestMetadata,
-                    "missing totp code during reauthentication"
-                );
+                        AuthAuditEventType.STEP_UP_FAILURE,
+                        currentUser,
+                        currentUser.getEmail(),
+                        requestMetadata,
+                        "missing totp code during reauthentication");
                 throw new ApiException(
-                    HttpStatus.UNAUTHORIZED,
-                    "MFA_REQUIRED",
-                    "Multi-factor authentication code is required."
-                );
+                        HttpStatus.UNAUTHORIZED,
+                        "MFA_REQUIRED",
+                        "Multi-factor authentication code is required.");
             }
             if (!mfaTotpService.isCodeValidForUser(currentUser, mfaCode)) {
                 authAuditService.record(
-                    AuthAuditEventType.STEP_UP_FAILURE,
-                    currentUser,
-                    currentUser.getEmail(),
-                    requestMetadata,
-                    "invalid totp code during reauthentication"
-                );
+                        AuthAuditEventType.STEP_UP_FAILURE,
+                        currentUser,
+                        currentUser.getEmail(),
+                        requestMetadata,
+                        "invalid totp code during reauthentication");
                 throw invalidMfaCodeException();
             }
         }
@@ -257,12 +238,11 @@ public class SessionApplicationService {
         userService.rotateSession(currentUser);
         refreshTokenService.revokeAllForUser(currentUser);
         authAuditService.record(
-            AuthAuditEventType.STEP_UP_SUCCESS,
-            currentUser,
-            currentUser.getEmail(),
-            requestMetadata,
-            "reauthentication successful"
-        );
+                AuthAuditEventType.STEP_UP_SUCCESS,
+                currentUser,
+                currentUser.getEmail(),
+                requestMetadata,
+                "reauthentication successful");
         return authenticate(currentUser, reauthenticatedAt);
     }
 
@@ -278,22 +258,20 @@ public class SessionApplicationService {
         TokenService.AccessToken accessToken = tokenService.issueAccessToken(user, reauthenticatedAt);
         RefreshTokenService.RefreshSession refreshSession = refreshTokenService.issue(user);
         return new AuthenticatedSession(
-            TOKEN_TYPE,
-            accessToken.token(),
-            accessToken.expiresAt(),
-            refreshSession.token(),
-            refreshSession.expiresAt(),
-            user
-        );
+                TOKEN_TYPE,
+                accessToken.token(),
+                accessToken.expiresAt(),
+                refreshSession.token(),
+                refreshSession.expiresAt(),
+                user);
     }
 
     private void requireVerifiedEmail(User user) {
         if (!user.isEmailVerified()) {
             throw new ApiException(
-                HttpStatus.FORBIDDEN,
-                "EMAIL_NOT_VERIFIED",
-                "Email verification is required before continuing."
-            );
+                    HttpStatus.FORBIDDEN,
+                    "EMAIL_NOT_VERIFIED",
+                    "Email verification is required before continuing.");
         }
     }
 
@@ -305,18 +283,16 @@ public class SessionApplicationService {
 
     private ApiException invalidLoginException() {
         return new ApiException(
-            HttpStatus.UNAUTHORIZED,
-            "INVALID_CREDENTIALS",
-            "Invalid email or password."
-        );
+                HttpStatus.UNAUTHORIZED,
+                "INVALID_CREDENTIALS",
+                "Invalid email or password.");
     }
 
     private ApiException invalidMfaCodeException() {
         return new ApiException(
-            HttpStatus.UNAUTHORIZED,
-            "INVALID_MFA_CODE",
-            "Invalid authentication code."
-        );
+                HttpStatus.UNAUTHORIZED,
+                "INVALID_MFA_CODE",
+                "Invalid authentication code.");
     }
 
     private boolean hasText(String value) {
@@ -324,11 +300,10 @@ public class SessionApplicationService {
     }
 
     private AuthenticatedSession loginWithFederatedProvider(
-        FederatedAuthProvider provider,
-        String idToken,
-        String mfaCode,
-        AuthRequestMetadata requestMetadata
-    ) {
+            FederatedAuthProvider provider,
+            String idToken,
+            String mfaCode,
+            AuthRequestMetadata requestMetadata) {
         FederatedIdentity federatedIdentity = federatedIdentityVerifier.verifyLoginToken(provider, idToken);
         String normalizedEmail = userService.normalizeEmail(federatedIdentity.email());
         authAbuseProtectionService.assertLoginAllowed(requestMetadata.clientIp(), normalizedEmail);
@@ -337,36 +312,32 @@ public class SessionApplicationService {
         if (!user.isActive()) {
             authAbuseProtectionService.recordLoginFailure(requestMetadata.clientIp(), normalizedEmail);
             authAuditService.record(
-                AuthAuditEventType.LOGIN_FAILURE,
-                user,
-                normalizedEmail,
-                requestMetadata,
-                provider.name().toLowerCase(Locale.ROOT) + " login rejected because the account is disabled"
-            );
+                    AuthAuditEventType.LOGIN_FAILURE,
+                    user,
+                    normalizedEmail,
+                    requestMetadata,
+                    provider.name().toLowerCase(Locale.ROOT) + " login rejected because the account is disabled");
             throw new ApiException(
-                HttpStatus.UNAUTHORIZED,
-                "ACCOUNT_DISABLED",
-                "Account is no longer active."
-            );
+                    HttpStatus.UNAUTHORIZED,
+                    "ACCOUNT_DISABLED",
+                    "Account is no longer active.");
         }
 
         if (user.isTotpMfaEnabled()) {
             if (!hasText(mfaCode)) {
                 throw new ApiException(
-                    HttpStatus.UNAUTHORIZED,
-                    "MFA_REQUIRED",
-                    "Multi-factor authentication code is required."
-                );
+                        HttpStatus.UNAUTHORIZED,
+                        "MFA_REQUIRED",
+                        "Multi-factor authentication code is required.");
             }
             if (!mfaTotpService.isCodeValidForUser(user, mfaCode)) {
                 authAbuseProtectionService.recordLoginFailure(requestMetadata.clientIp(), normalizedEmail);
                 authAuditService.record(
-                    AuthAuditEventType.MFA_FAILURE,
-                    user,
-                    normalizedEmail,
-                    requestMetadata,
-                    "invalid totp code during " + provider.name().toLowerCase(Locale.ROOT) + " login"
-                );
+                        AuthAuditEventType.MFA_FAILURE,
+                        user,
+                        normalizedEmail,
+                        requestMetadata,
+                        "invalid totp code during " + provider.name().toLowerCase(Locale.ROOT) + " login");
                 throw invalidMfaCodeException();
             }
         }
@@ -377,24 +348,22 @@ public class SessionApplicationService {
         externalIdentityService.link(user, federatedIdentity);
         authAbuseProtectionService.clearLoginFailures(requestMetadata.clientIp(), normalizedEmail);
         authAuditService.record(
-            AuthAuditEventType.LOGIN_SUCCESS,
-            user,
-            normalizedEmail,
-            requestMetadata,
-            provider.name().toLowerCase(Locale.ROOT) + " login successful"
-        );
+                AuthAuditEventType.LOGIN_SUCCESS,
+                user,
+                normalizedEmail,
+                requestMetadata,
+                provider.name().toLowerCase(Locale.ROOT) + " login successful");
         return authenticate(userService.getRequiredUser(user.getId()), Instant.now());
     }
 
     private User resolveUserForFederatedIdentity(FederatedIdentity federatedIdentity) {
         return externalIdentityService.findUser(federatedIdentity.provider(), federatedIdentity.subject())
-            .orElseGet(() -> userService.findByEmail(federatedIdentity.email())
-                .orElseGet(() -> userService.registerFederatedUser(
-                    federatedIdentity.email(),
-                    passwordEncoder.encode(generateFederatedPlaceholderPassword(federatedIdentity)),
-                    fallbackFederatedFullName(federatedIdentity),
-                    federatedIdentity.emailVerified() ? Instant.now() : null
-                )));
+                .orElseGet(() -> userService.findByEmail(federatedIdentity.email())
+                        .orElseGet(() -> userService.registerFederatedUser(
+                                federatedIdentity.email(),
+                                passwordEncoder.encode(generateFederatedPlaceholderPassword(federatedIdentity)),
+                                fallbackFederatedFullName(federatedIdentity),
+                                federatedIdentity.emailVerified() ? Instant.now() : null)));
     }
 
     private String fallbackFederatedFullName(FederatedIdentity federatedIdentity) {
@@ -408,6 +377,6 @@ public class SessionApplicationService {
         byte[] randomBytes = new byte[24];
         secureRandom.nextBytes(randomBytes);
         return federatedIdentity.provider().name() + ":" + federatedIdentity.subject() + ":"
-            + PLACEHOLDER_PASSWORD_ENCODER.encodeToString(randomBytes);
+                + PLACEHOLDER_PASSWORD_ENCODER.encodeToString(randomBytes);
     }
 }

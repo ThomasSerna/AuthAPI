@@ -18,7 +18,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -41,52 +40,50 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-        HttpSecurity http,
-        Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter,
-        CorsConfigurationSource corsConfigurationSource,
-        RestAuthenticationEntryPoint authenticationEntryPoint,
-        RestAccessDeniedHandler accessDeniedHandler
-    ) throws Exception {
+            HttpSecurity http,
+            Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter,
+            CorsConfigurationSource corsConfigurationSource,
+            RestAuthenticationEntryPoint authenticationEntryPoint,
+            RestAccessDeniedHandler accessDeniedHandler) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configurationSource(corsConfigurationSource))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers(
-                    HttpMethod.POST,
-                    CoreApiPaths.AUTH_REGISTER,
-                    CoreApiPaths.AUTH_LOGIN,
-                    CoreApiPaths.AUTH_LOGIN_GOOGLE,
-                    CoreApiPaths.AUTH_LOGIN_MICROSOFT,
-                    CoreApiPaths.AUTH_REFRESH,
-                    CoreApiPaths.AUTH_LOGOUT,
-                    CoreApiPaths.AUTH_EMAIL_VERIFICATION_REQUEST,
-                    CoreApiPaths.AUTH_EMAIL_VERIFICATION_CONFIRM,
-                    CoreApiPaths.AUTH_FORGOT_PASSWORD,
-                    CoreApiPaths.AUTH_RESET_PASSWORD
-                )
-                .permitAll()
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/",
-                    "/index.html",
-                    "/verify-email",
-                    "/reset-password"
-                )
-                .permitAll()
-                .requestMatchers("/actuator/health", "/actuator/info")
-                .permitAll()
-                .anyRequest()
-                .authenticated()
-            )
-            .exceptionHandling(exceptionHandling -> exceptionHandling
-                .authenticationEntryPoint(authenticationEntryPoint)
-                .accessDeniedHandler(accessDeniedHandler)
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
-            .httpBasic(AbstractHttpConfigurer::disable)
-            .formLogin(AbstractHttpConfigurer::disable)
-            .logout(AbstractHttpConfigurer::disable);
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                CoreApiPaths.AUTH_REGISTER,
+                                CoreApiPaths.AUTH_LOGIN,
+                                CoreApiPaths.AUTH_LOGIN_GOOGLE,
+                                CoreApiPaths.AUTH_LOGIN_MICROSOFT,
+                                CoreApiPaths.AUTH_REFRESH,
+                                CoreApiPaths.AUTH_LOGOUT,
+                                CoreApiPaths.AUTH_EMAIL_VERIFICATION_REQUEST,
+                                CoreApiPaths.AUTH_EMAIL_VERIFICATION_CONFIRM,
+                                CoreApiPaths.AUTH_FORGOT_PASSWORD,
+                                CoreApiPaths.AUTH_RESET_PASSWORD)
+                        .permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/",
+                                "/index.html",
+                                "/styles.css",
+                                "/app.js",
+                                "/verify-email",
+                                "/reset-password")
+                        .permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated())
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
+                .oauth2ResourceServer(
+                        oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable);
 
         return http.build();
     }
@@ -95,11 +92,11 @@ public class SecurityConfig {
     public Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter() {
         return jwt -> {
             Collection<GrantedAuthority> authorities = Optional.ofNullable(jwt.getClaimAsStringList("roles"))
-                .orElseGet(List::of)
-                .stream()
-                .map(role -> "ROLE_" + role)
-                .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
+                    .orElseGet(List::of)
+                    .stream()
+                    .map(role -> "ROLE_" + role)
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
             return new JwtAuthenticationToken(jwt, authorities, jwt.getSubject());
         };
     }

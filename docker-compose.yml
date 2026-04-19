@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: authapi-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: authapi
+      MYSQL_USER: authapi
+      MYSQL_PASSWORD: authapi
+      MYSQL_ROOT_PASSWORD: root_password_sec
+    volumes:
+      - authapi-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  authapi-mysql-data:

@@ -1,10 +1,106 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AuthApi</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuthAPI Explorer</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <h1>AuthAPI</h1>
+            </div>
+            
+            <div class="nav-section">
+                <h3>Authentication</h3>
+                <ul class="nav-links" id="nav-auth"></ul>
+            </div>
+            <div class="nav-section">
+                <h3>Account & Password</h3>
+                <ul class="nav-links" id="nav-account"></ul>
+            </div>
+            <div class="nav-section">
+                <h3>MFA & Verification</h3>
+                <ul class="nav-links" id="nav-mfa"></ul>
+            </div>
+            <div class="nav-section">
+                <h3>User Data</h3>
+                <ul class="nav-links" id="nav-user"></ul>
+            </div>
+        </aside>
+
+        <!-- Main Content Panel -->
+        <main class="main-panel">
+            <header class="top-bar">
+                <div class="endpoint-info">
+                    <span id="current-method" class="method badge">GET</span>
+                    <span id="current-path" class="path">/api/v1/...</span>
+                </div>
+                <div class="global-state">
+                    <div class="status-indicator" id="auth-status-indicator"></div>
+                    <span id="auth-status-text">Not Authenticated</span>
+                    <button id="clear-token-btn" class="btn-sm btn-outline hidden">Clear Token</button>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Form Area -->
+                <section class="form-section glass-panel">
+                    <div class="section-header">
+                        <h2 id="form-title">Endpoint Name</h2>
+                        <p id="form-desc" class="text-muted">Description goes here</p>
+                    </div>
+                    
+                    <form id="dynamic-form" class="dynamic-form">
+                        <!-- Dynamic fields injected here -->
+                    </form>
+
+                    <!-- Hidden by default, specific to OAuth -->
+                    <div id="federated-login-container" class="federated-login-container hidden">
+                        <div class="divider"><span>OR</span></div>
+                        <div class="oauth-buttons">
+                            <div id="google-signin-button"></div>
+                            <button id="microsoft-signin-button" class="btn btn-microsoft">Sign in with Microsoft</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" form="dynamic-form" id="submit-btn" class="btn btn-primary btn-glow">Send Request</button>
+                    </div>
+                </section>
+
+                <!-- Response Area -->
+                <section class="response-section glass-panel">
+                    <div class="section-header">
+                        <h2>Response</h2>
+                        <div class="response-meta hidden" id="response-meta">
+                            <span class="status-code badge" id="res-status">200 OK</span>
+                            <span class="time badge" id="res-time">120ms</span>
+                        </div>
+                    </div>
+                    
+                    <div class="code-container">
+                        <pre><code id="response-body">Hit "Send Request" to see the response...</code></pre>
+                    </div>
+                    <div id="qr-container" class="hidden" style="margin-top: 1.5rem; text-align: center; border-top: 1px solid var(--panel-border); padding-top: 1.5rem;">
+                        <p class="text-muted" style="margin-bottom: 1rem; font-size: 0.9rem;">Scan this QR code with your Authenticator app</p>
+                        <img id="qr-code-img" src="" alt="TOTP QR Code" style="background: white; padding: 16px; border-radius: 12px; max-width: 200px;">
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://alcdn.msauth.net/browser/2.30.0/js/msal-browser.min.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
